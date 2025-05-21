@@ -1,0 +1,121 @@
+
+You want a webpage with a link that, when clicked, provides (displays) the current location (geolocation) of the user who clicked. I will create a single HTML file with a clickable link and, upon clicking, it will request the user's geolocation using the browser's Geolocation API. When the location is retrieved, it will be displayed on the page with latitude and longitude.
+
+Plan:
+- Single HTML file with a styled clickable link.
+- When clicked, request geolocation permission.
+- On success, display latitude and longitude below the link.
+- On error or if permission denied, display an appropriate error message.
+- Styling modern and visually appealing.
+
+Now I will proceed with creating the HTML file.
+
+`location-link.html`
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Get Current Location</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #e8f0fe;
+    margin: 0;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #202124;
+  }
+  h1 {
+    color: #1a73e8;
+    margin-bottom: 40px;
+  }
+  a#get-location {
+    display: inline-block;
+    padding: 14px 28px;
+    background-color: #1a73e8;
+    color: white;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+  }
+  a#get-location:hover {
+    background-color: #155ab6;
+  }
+  #location-display {
+    margin-top: 30px;
+    font-size: 1.2rem;
+    font-weight: 500;
+    background: white;
+    padding: 20px 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(26, 115, 232, 0.1);
+    max-width: 350px;
+    text-align: center;
+  }
+  #location-display.error {
+    color: #d93025;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+  <h1>Get Your Current Location</h1>
+  <a href="#" id="get-location" role="button" aria-label="Get current location">Get Location</a>
+
+  <div id="location-display" aria-live="polite"></div>
+
+  <script>
+    const locationBtn = document.getElementById('get-location');
+    const locationDisplay = document.getElementById('location-display');
+
+    locationBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      locationDisplay.textContent = 'Locating… Please allow location access.';
+      locationDisplay.classList.remove('error');
+
+      if (!navigator.geolocation) {
+        locationDisplay.textContent = 'Geolocation is not supported by your browser.';
+        locationDisplay.classList.add('error');
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          locationDisplay.innerHTML = `
+            📍 Your current location:<br/>
+            Latitude: <strong>${latitude.toFixed(5)}</strong><br/>
+            Longitude: <strong>${longitude.toFixed(5)}</strong>
+          `;
+        },
+        (error) => {
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              locationDisplay.textContent = 'Permission denied. Please allow location access.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              locationDisplay.textContent = 'Position unavailable.';
+              break;
+            case error.TIMEOUT:
+              locationDisplay.textContent = 'Location request timed out.';
+              break;
+            default:
+              locationDisplay.textContent = 'An unknown error occurred.';
+              break;
+          }
+          locationDisplay.classList.add('error');
+        }
+      );
+    });
+  </script>
+</body>
+</html>
+
+```
