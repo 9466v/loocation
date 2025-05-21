@@ -1,116 +1,138 @@
 
-You want a webpage with a link that, when clicked, provides (displays) the current location (geolocation) of the user who clicked. I will create a single HTML file with a clickable link and, upon clicking, it will request the user's geolocation using the browser's Geolocation API. When the location is retrieved, it will be displayed on the page with latitude and longitude.
+You want to create a clickable link that, when clicked, sends the current geolocation coordinates via SMS to the phone number +91 9466574013. However, web browsers cannot send SMS messages directly by themselves due to security and platform limitations.
 
-Plan:
-- Single HTML file with a styled clickable link.
-- When clicked, request geolocation permission.
-- On success, display latitude and longitude below the link.
-- On error or if permission denied, display an appropriate error message.
-- Styling modern and visually appealing.
+The common approach on mobile devices is to use an SMS URI scheme (sms:) with a predefined message containing the location. However, the device user will need to manually send it via their SMS app — the browser can't send SMS automatically.
 
-Now I will proceed with creating the HTML file.
+So the solution:
+- Create a clickable link or button.
+- When clicked, get the current location coordinates.
+- Then open the SMS app on the device with the phone number and the message pre-filled with the location.
+- User has to tap "Send" in their SMS app.
 
-`location-link.html`
+This works on mobile devices that support sms: URIs.
+
+I'll create a single HTML file that:
+- Has a stylish clickable link "Send My Location"
+- On click, uses Geolocation API to get current location
+- If successful, it builds an sms: link with body containing location info and phone number +91 9466574013
+- It then redirects the browser to that sms: URI to open SMS app
+
+If geolocation is not supported or denied, display error message on the page.
+
+This solution is the closest we can do purely client-side.
+
+I will embed CSS and JavaScript into a single HTML file with modern styling.
+
+Now I will proceed with the implementation.
+
+
+`send-location-sms.html`
 ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Get Current Location</title>
-<style>
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #e8f0fe;
-    margin: 0;
-    padding: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: #202124;
-  }
-  h1 {
-    color: #1a73e8;
-    margin-bottom: 40px;
-  }
-  a#get-location {
-    display: inline-block;
-    padding: 14px 28px;
-    background-color: #1a73e8;
-    color: white;
-    font-weight: 600;
-    text-decoration: none;
-    border-radius: 30px;
-    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
-    transition: background-color 0.3s ease;
-    cursor: pointer;
-  }
-  a#get-location:hover {
-    background-color: #155ab6;
-  }
-  #location-display {
-    margin-top: 30px;
-    font-size: 1.2rem;
-    font-weight: 500;
-    background: white;
-    padding: 20px 30px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(26, 115, 232, 0.1);
-    max-width: 350px;
-    text-align: center;
-  }
-  #location-display.error {
-    color: #d93025;
-    font-weight: 700;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Send Location via SMS</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      text-align: center;
+      padding: 0 20px;
+    }
+    a#sendLocationLink {
+      font-size: 1.4rem;
+      color: #fff;
+      background-color: #ff3f6c;
+      text-decoration: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(255, 63, 108, 0.5);
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s ease;
+      display: inline-block;
+      margin-bottom: 1.5rem;
+    }
+    a#sendLocationLink:hover {
+      background-color: #e03664;
+    }
+    #message {
+      font-size: 1.2rem;
+      min-height: 1.5em;
+      color: #222;
+      background: rgba(255 255 255 / 0.7);
+      padding: 12px 18px;
+      border-radius: 10px;
+      max-width: 400px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      user-select: text;
+    }
+  </style>
 </head>
 <body>
-  <h1>Get Your Current Location</h1>
-  <a href="#" id="get-location" role="button" aria-label="Get current location">Get Location</a>
-
-  <div id="location-display" aria-live="polite"></div>
+  <a id="sendLocationLink" href="#">Send My Current Location via SMS</a>
+  <div id="message" aria-live="polite" role="status"></div>
 
   <script>
-    const locationBtn = document.getElementById('get-location');
-    const locationDisplay = document.getElementById('location-display');
+    const sendLink = document.getElementById('sendLocationLink');
+    const messageDiv = document.getElementById('message');
+    const phoneNumber = '+919466574013'; // formatted without spaces for sms uri
 
-    locationBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      locationDisplay.textContent = 'Locating… Please allow location access.';
-      locationDisplay.classList.remove('error');
+    sendLink.addEventListener('click', (event) => {
+      event.preventDefault();
 
       if (!navigator.geolocation) {
-        locationDisplay.textContent = 'Geolocation is not supported by your browser.';
-        locationDisplay.classList.add('error');
+        messageDiv.textContent = 'Geolocation is not supported by your browser.';
         return;
       }
 
+      messageDiv.textContent = 'Getting your location…';
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const { latitude, longitude } = position.coords;
-          locationDisplay.innerHTML = `
-            📍 Your current location:<br/>
-            Latitude: <strong>${latitude.toFixed(5)}</strong><br/>
-            Longitude: <strong>${longitude.toFixed(5)}</strong>
-          `;
+          const lat = position.coords.latitude.toFixed(6);
+          const lon = position.coords.longitude.toFixed(6);
+          const smsBody = encodeURIComponent(
+            `Hello, here is my current location:\nhttps://maps.google.com/?q=${lat},${lon}`
+          );
+          // Construct sms URI with phone number and body
+          // Some devices require &body=, some support ?body=
+          const smsURI = `sms:${phoneNumber}?body=${smsBody}`;
+
+          messageDiv.textContent = 'Opening SMS app with your location... If nothing happens, make sure you are on a device that can handle SMS links.';
+
+          // Redirect to sms URI to open SMS app
+          window.location.href = smsURI;
+
         },
         (error) => {
           switch(error.code) {
             case error.PERMISSION_DENIED:
-              locationDisplay.textContent = 'Permission denied. Please allow location access.';
+              messageDiv.textContent = 'Permission denied. Please allow location access.';
               break;
             case error.POSITION_UNAVAILABLE:
-              locationDisplay.textContent = 'Position unavailable.';
+              messageDiv.textContent = 'Location information is unavailable.';
               break;
             case error.TIMEOUT:
-              locationDisplay.textContent = 'Location request timed out.';
+              messageDiv.textContent = 'The request to get your location timed out.';
               break;
             default:
-              locationDisplay.textContent = 'An unknown error occurred.';
-              break;
+              messageDiv.textContent = 'An unknown error occurred while fetching location.';
           }
-          locationDisplay.classList.add('error');
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         }
       );
     });
